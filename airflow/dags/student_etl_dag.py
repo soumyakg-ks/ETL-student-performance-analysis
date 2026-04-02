@@ -10,9 +10,9 @@ import json
 import os
 
 # ── Config ────────────────────────────────────────────────────
-CSV_PATH     = "/opt/airflow/dataset/student_dataset.csv"
-OUTPUT_PATH  = "/opt/airflow/output/students_processed.json"
-SUMMARY_PATH = "/opt/airflow/output/summary.json"
+CSV_PATH     = "/opt/airflow/dags/student_dataset.csv"
+OUTPUT_PATH  = "/opt/airflow/dags/students_processed.json"
+SUMMARY_PATH = "/opt/airflow/dags/summary.json"
 NOTIFY_EMAIL = "kgsou1605@gmail.com"
 SMTP_HOST    = "smtp.gmail.com"
 SMTP_PORT    = 587
@@ -79,7 +79,7 @@ def on_retry_email(context):
 
 # ── ETL function ──────────────────────────────────────────────
 def run_etl():
-    os.makedirs("/opt/airflow/output", exist_ok=True)
+    os.makedirs("/opt/airflow/dags", exist_ok=True)
 
     df = pd.read_csv(CSV_PATH)
     df.columns   = df.columns.str.strip()
