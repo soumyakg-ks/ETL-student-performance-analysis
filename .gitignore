@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+
+# Logs
+logs/
+*.log
+
+# Database
+database/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large embedded data file - regenerate with: python -c "..."
+frontend/data.js

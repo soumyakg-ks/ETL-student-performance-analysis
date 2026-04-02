@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student ETL — Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+</head>
+<body>
+
+<header>
+  <span class="logo-icon">🎓</span>
+  Student ETL Dashboard
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☀️ Light Mode</button>
+</header>
+
+<nav>
+  <a href="index.html" class="active">Dashboard</a>
+  <a href="students.html">Students</a>
+  <a href="analytics.html">Analytics</a>
+</nav>
+
+<div class="container">
+
+  <div class="section-title">📊 Overview</div>
+  <div class="cards">
+    <div class="card"><div class="icon">👥</div><h2 id="kTotal">0</h2><p>Total Students</p></div>
+    <div class="card"><div class="icon">🏅</div><h2 id="kAPlus">0</h2><p>Grade A+</p></div>
+    <div class="card"><div class="icon">🏆</div><h2 id="kA">0</h2><p>Grade A</p></div>
+    <div class="card"><div class="icon">📘</div><h2 id="kBPlus">0</h2><p>Grade B+</p></div>
+    <div class="card"><div class="icon">📗</div><h2 id="kB">0</h2><p>Grade B</p></div>
+    <div class="card"><div class="icon">📙</div><h2 id="kC">0</h2><p>Grade C</p></div>
+    <div class="card"><div class="icon">📉</div><h2 id="kD">0</h2><p>Grade D</p></div>
+    <div class="card"><div class="icon">❌</div><h2 id="kF">0</h2><p>Failed (F)</p></div>
+  </div>
+
+  <div class="section-title">📈 Quick Insights</div>
+  <div class="score-cards">
+    <div class="score-card"><div class="subject">Math Avg</div><div class="avg" id="mathAvg">—</div></div>
+    <div class="score-card"><div class="subject">Physics Avg</div><div class="avg" id="physicsAvg">—</div></div>
+    <div class="score-card"><div class="subject">Chemistry Avg</div><div class="avg" id="chemAvg">—</div></div>
+    <div class="score-card"><div class="subject">Pass Rate</div><div class="avg" id="passRate">—</div></div>
+    <div class="score-card"><div class="subject">Avg Total</div><div class="avg" id="avgTotal">—</div></div>
+    <div class="score-card"><div class="subject">Top Score</div><div class="avg" id="topScore">0</div></div>
+  </div>
+
+  <div class="section-title">🏆 Top 10 Students</div>
+  <div class="leaderboard" id="leaderboard"></div>
+
+</div>
+
+<script>
+function toggleTheme() {
+  var isLight = document.body.classList.toggle('light');
+  document.getElementById('themeBtn').innerHTML = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+if (localStorage.getItem('theme') === 'light') {
+  document.body.classList.add('light');
+  document.getElementById('themeBtn').innerHTML = '🌙 Dark Mode';
+}
+
+function animateCount(id, target) {
+  var el = document.getElementById(id);
+  var start = 0;
+  var step = Math.ceil(target / 60);
+  var timer = setInterval(function() {
+    start += step;
+    if (start >= target) { start = target; clearInterval(timer); }
+    el.innerText = start;
+  }, 16);
+}
+
+var data = STUDENT_DATA;
+var n = data.length;
+var gc = {}, math = 0, phy = 0, chem = 0, totalSum = 0, topScore = 0, failCount = 0;
+
+for (var i = 0; i < n; i++) {
+  var s = data[i];
+  var g = (s.Grade || '').trim();
+  gc[g] = (gc[g] || 0) + 1;
+  var m = s.Math || 0, p = s.Physics || 0, c = s.Chemistry || 0;
+  math += m; phy += p; chem += c;
+  var tot = m + p + c;
+  totalSum += tot;
+  if (tot > topScore) topScore = tot;
+  if (g === 'F') failCount++;
+}
+
+animateCount('kTotal', n);
+animateCount('kAPlus', gc['A+'] || 0);
+animateCount('kA',     gc['A']  || 0);
+animateCount('kBPlus', gc['B+'] || 0);
+animateCount('kB',     gc['B']  || 0);
+animateCount('kC',     gc['C']  || 0);
+animateCount('kD',     gc['D']  || 0);
+animateCount('kF',     gc['F']  || 0);
+animateCount('topScore', topScore);
+
+document.getElementById('mathAvg').innerText    = (math / n).toFixed(1);
+document.getElementById('physicsAvg').innerText = (phy  / n).toFixed(1);
+document.getElementById('chemAvg').innerText    = (chem / n).toFixed(1);
+document.getElementById('passRate').innerText   = (((n - failCount) / n) * 100).toFixed(1) + '%';
+document.getElementById('avgTotal').innerText   = (totalSum / n).toFixed(1);
+
+var sorted = data.slice().sort(function(a, b) {
+  return ((b.Math||0)+(b.Physics||0)+(b.Chemistry||0)) - ((a.Math||0)+(a.Physics||0)+(a.Chemistry||0));
+}).slice(0, 10);
+
+var rankEmoji = ['🥇','🥈','🥉'];
+var html = '<div class="leaderboard-row header"><div>Rank</div><div>Name</div><div style="text-align:center">Math</div><div style="text-align:center">Physics</div><div style="text-align:center">Chemistry</div><div style="text-align:center">Total</div><div style="text-align:center">Grade</div></div>';
+for (var i = 0; i < sorted.length; i++) {
+  var s = sorted[i];
+  var g = (s.Grade || '').trim();
+  var tot = (s.Math||0) + (s.Physics||0) + (s.Chemistry||0);
+  html += '<div class="leaderboard-row">' +
+    '<div class="rank ' + (i < 3 ? 'rank-'+(i+1) : 'rank-other') + '">' + (i < 3 ? rankEmoji[i] : i+1) + '</div>' +
+    '<div class="lb-name">' + (s['Student_Names']||'—') + '</div>' +
+    '<div class="lb-sub">' + (s.Math||0) + '</div>' +
+    '<div class="lb-sub">' + (s.Physics||0) + '</div>' +
+    '<div class="lb-sub">' + (s.Chemistry||0) + '</div>' +
+    '<div class="lb-score">' + tot + '</div>' +
+    '<div style="text-align:center"><span class="grade-' + g + '"><span class="badge">' + g + '</span></span></div>' +
+    '</div>';
+}
+document.getElementById('leaderboard').innerHTML = html;
+</script>
+
+</body>
+</html>

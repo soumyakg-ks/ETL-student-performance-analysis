@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student ETL — Students</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+</head>
+<body>
+
+<header>
+  <span class="logo-icon">🎓</span>
+  Student ETL Dashboard
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☀️ Light Mode</button>
+</header>
+
+<nav>
+  <a href="index.html">Dashboard</a>
+  <a href="students.html" class="active">Students</a>
+  <a href="analytics.html">Analytics</a>
+</nav>
+
+<div class="container">
+
+  <div class="section-title">🎓 Student Records</div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search" placeholder="Search by name, school or roll no…">
+    </div>
+    <div class="filter-btns">
+      <button class="active" onclick="filterGrade('all',this)">All</button>
+      <button onclick="filterGrade('A+',this)">A+</button>
+      <button onclick="filterGrade('A',this)">A</button>
+      <button onclick="filterGrade('B+',this)">B+</button>
+      <button onclick="filterGrade('B',this)">B</button>
+      <button onclick="filterGrade('C',this)">C</button>
+      <button onclick="filterGrade('D',this)">D</button>
+      <button onclick="filterGrade('F',this)">F</button>
+    </div>
+  </div>
+
+  <div class="record-count" id="recordCount"></div>
+
+  <div class="table-wrap">
+    <table id="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="sortable" onclick="sortBy('Student_Names',this)">Name</th>
+          <th class="sortable" onclick="sortBy('Roll No.',this)">Roll No.</th>
+          <th>School</th>
+          <th class="sortable" onclick="sortBy('Math',this)">Math</th>
+          <th class="sortable" onclick="sortBy('Physics',this)">Physics</th>
+          <th class="sortable" onclick="sortBy('Chemistry',this)">Chemistry</th>
+          <th class="sortable" onclick="sortBy('Total',this)">Total</th>
+          <th class="sortable" onclick="sortBy('Grade',this)">Grade</th>
+          <th>Comment</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div class="modal-header">
+      <div class="modal-avatar" id="mAvatar">?</div>
+      <div>
+        <div class="modal-name" id="mName">—</div>
+        <div class="modal-roll" id="mRoll">—</div>
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-item"><div class="label">School</div><div class="value" id="mSchool">—</div></div>
+      <div class="modal-item"><div class="label">Grade</div><div class="value" id="mGrade">—</div></div>
+      <div class="modal-item"><div class="label">Phone</div><div class="value" id="mPhone">—</div></div>
+      <div class="modal-item"><div class="label">Address</div><div class="value" id="mAddress" style="font-size:12px">—</div></div>
+    </div>
+    <div class="modal-scores">
+      <div class="modal-score-box"><div class="s-label">Math</div><div class="s-val" id="mMath">—</div></div>
+      <div class="modal-score-box"><div class="s-label">Physics</div><div class="s-val" id="mPhysics">—</div></div>
+      <div class="modal-score-box"><div class="s-label">Chemistry</div><div class="s-val" id="mChem">—</div></div>
+      <div class="modal-score-box"><div class="s-label">Total</div><div class="s-val" id="mTotal">—</div></div>
+    </div>
+    <div class="modal-comment">
+      <div class="label">Comment</div>
+      <div class="value" id="mComment">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var isLight = document.body.classList.toggle('light');
+  document.getElementById('themeBtn').innerHTML = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+if (localStorage.getItem('theme') === 'light') {
+  document.body.classList.add('light');
+  document.getElementById('themeBtn').innerHTML = '🌙 Dark Mode';
+}
+
+var allData = STUDENT_DATA;
+var currentGrade = 'all';
+var sortKey = null;
+var sortDir = 1;
+var filteredData = allData.slice();
+
+function render(data) {
+  var tbody = document.querySelector('#table tbody');
+  document.getElementById('recordCount').innerText = 'Showing ' + data.length + ' student' + (data.length !== 1 ? 's' : '') + ' — click any row to view details';
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="padding:30px;color:#94a3b8">No students found.</td></tr>';
+    return;
+  }
+  var rows = '';
+  for (var i = 0; i < data.length; i++) {
+    var s = data[i];
+    var g = (s.Grade || '').trim();
+    var tot = (s.Math || 0) + (s.Physics || 0) + (s.Chemistry || 0);
+    rows += '<tr onclick="openModal(' + i + ')">' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td style="text-align:left;font-weight:500">' + (s['Student_Names'] || '—') + '</td>' +
+      '<td>' + (s['Roll No.'] || '—') + '</td>' +
+      '<td style="text-align:left;font-size:12px">' + (s['School Name'] || '—') + '</td>' +
+      '<td>' + (s.Math != null ? s.Math : '—') + '</td>' +
+      '<td>' + (s.Physics != null ? s.Physics : '—') + '</td>' +
+      '<td>' + (s.Chemistry != null ? s.Chemistry : '—') + '</td>' +
+      '<td style="font-weight:600">' + tot + '</td>' +
+      '<td class="grade-' + g + '"><span class="badge">' + (g || '—') + '</span></td>' +
+      '<td style="text-align:left;font-size:11px;color:#94a3b8">' + (s.Comment || '—') + '</td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = rows;
+}
+
+function applyFilters() {
+  var val = document.getElementById('search').value.toLowerCase();
+  filteredData = [];
+  for (var i = 0; i < allData.length; i++) {
+    var s = allData[i];
+    var g = (s.Grade || '').trim();
+    if (currentGrade !== 'all' && g !== currentGrade) continue;
+    if (val) {
+      if (!(s['Student_Names'] || '').toLowerCase().includes(val) &&
+          !(s['School Name'] || '').toLowerCase().includes(val) &&
+          !String(s['Roll No.'] || '').includes(val)) continue;
+    }
+    filteredData.push(s);
+  }
+  if (sortKey) applySort(false);
+  else render(filteredData);
+}
+
+function filterGrade(g, btn) {
+  document.querySelectorAll('.filter-btns button').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  currentGrade = g;
+  applyFilters();
+}
+
+document.getElementById('search').addEventListener('input', applyFilters);
+
+var lastTh = null;
+function sortBy(key, th) {
+  if (sortKey === key) { sortDir *= -1; }
+  else { sortKey = key; sortDir = 1; }
+  if (lastTh) { lastTh.classList.remove('sort-asc', 'sort-desc'); }
+  th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  lastTh = th;
+  applySort(true);
+}
+
+function applySort(doRender) {
+  var k = sortKey, d = sortDir;
+  filteredData.sort(function(a, b) {
+    var av = a[k], bv = b[k];
+    if (k === 'Total') {
+      av = (a.Math || 0) + (a.Physics || 0) + (a.Chemistry || 0);
+      bv = (b.Math || 0) + (b.Physics || 0) + (b.Chemistry || 0);
+    }
+    if (typeof av === 'number') return (av - bv) * d;
+    return String(av || '').localeCompare(String(bv || '')) * d;
+  });
+  if (doRender) render(filteredData);
+}
+
+function openModal(idx) {
+  var s = filteredData[idx];
+  var g = (s.Grade || '').trim();
+  var tot = (s.Math || 0) + (s.Physics || 0) + (s.Chemistry || 0);
+  var name = s['Student_Names'] || '—';
+  document.getElementById('mAvatar').innerText  = name.charAt(0).toUpperCase();
+  document.getElementById('mName').innerText    = name;
+  document.getElementById('mRoll').innerText    = 'Roll No: ' + (s['Roll No.'] || '—');
+  document.getElementById('mSchool').innerText  = s['School Name'] || '—';
+  document.getElementById('mPhone').innerText   = s['Phone_No.'] || '—';
+  document.getElementById('mAddress').innerText = s['Student Address'] || '—';
+  document.getElementById('mMath').innerText    = s.Math || 0;
+  document.getElementById('mPhysics').innerText = s.Physics || 0;
+  document.getElementById('mChem').innerText    = s.Chemistry || 0;
+  document.getElementById('mTotal').innerText   = tot;
+  document.getElementById('mComment').innerText = s.Comment || '—';
+  document.getElementById('mGrade').innerHTML   = '<span class="grade-' + g + '"><span class="badge">' + (g || '—') + '</span></span>';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function closeModalDirect() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.getElementById('modalOverlay').classList.remove('open');
+});
+
+render(allData);
+</script>
+
+</body>
+</html>
