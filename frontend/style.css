@@ -319,6 +319,31 @@ tbody tr:last-child td { border-bottom: none; }
 .modal-comment .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
 .modal-comment .value { font-size: 14px; color: var(--text); }
 
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.pagination button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  min-width: 38px;
+}
+.pagination button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.pagination button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* ── Animations ── */
 @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 .card, .chart-card, .table-wrap, .toolbar, .score-card, .leaderboard { animation: fadeUp 0.5s ease both; }

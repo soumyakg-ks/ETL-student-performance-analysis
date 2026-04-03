@@ -64,6 +64,9 @@
     </table>
   </div>
 
+  <!-- Pagination -->
+  <div class="pagination" id="pagination"></div>
+
 </div>
 
 <!-- Modal -->
@@ -107,26 +110,42 @@ if (localStorage.getItem('theme') === 'light') {
   document.getElementById('themeBtn').innerHTML = '🌙 Dark Mode';
 }
 
-var allData = STUDENT_DATA;
-var currentGrade = 'all';
-var sortKey = null;
-var sortDir = 1;
+var allData      = STUDENT_DATA;
 var filteredData = allData.slice();
+var currentGrade = 'all';
+var sortKey      = null;
+var sortDir      = 1;
+var currentPage  = 1;
+var pageSize     = 50;
 
-function render(data) {
+/* ── Render page ── */
+function render() {
+  var total     = filteredData.length;
+  var totalPages = Math.ceil(total / pageSize);
+  if (currentPage > totalPages) currentPage = 1;
+
+  var start = (currentPage - 1) * pageSize;
+  var end   = Math.min(start + pageSize, total);
+  var page  = filteredData.slice(start, end);
+
+  document.getElementById('recordCount').innerText =
+    'Showing ' + (start + 1) + '–' + end + ' of ' + total + ' students — click any row to view details';
+
   var tbody = document.querySelector('#table tbody');
-  document.getElementById('recordCount').innerText = 'Showing ' + data.length + ' student' + (data.length !== 1 ? 's' : '') + ' — click any row to view details';
-  if (data.length === 0) {
+  if (total === 0) {
     tbody.innerHTML = '<tr><td colspan="10" style="padding:30px;color:#94a3b8">No students found.</td></tr>';
+    document.getElementById('pagination').innerHTML = '';
     return;
   }
+
   var rows = '';
-  for (var i = 0; i < data.length; i++) {
-    var s = data[i];
-    var g = (s.Grade || '').trim();
+  for (var i = 0; i < page.length; i++) {
+    var s   = page[i];
+    var g   = (s.Grade || '').trim();
     var tot = (s.Math || 0) + (s.Physics || 0) + (s.Chemistry || 0);
-    rows += '<tr onclick="openModal(' + i + ')">' +
-      '<td>' + (i + 1) + '</td>' +
+    var globalIdx = start + i;
+    rows += '<tr onclick="openModal(' + globalIdx + ')">' +
+      '<td>' + (start + i + 1) + '</td>' +
       '<td style="text-align:left;font-weight:500">' + (s['Student_Names'] || '—') + '</td>' +
       '<td>' + (s['Roll No.'] || '—') + '</td>' +
       '<td style="text-align:left;font-size:12px">' + (s['School Name'] || '—') + '</td>' +
@@ -139,8 +158,41 @@ function render(data) {
       '</tr>';
   }
   tbody.innerHTML = rows;
+
+  renderPagination(totalPages);
 }
 
+/* ── Pagination ── */
+function renderPagination(totalPages) {
+  var pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  var html = '';
+  html += '<button onclick="goPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>‹ Prev</button>';
+
+  var start = Math.max(1, currentPage - 2);
+  var end   = Math.min(totalPages, currentPage + 2);
+
+  if (start > 1) { html += '<button onclick="goPage(1)">1</button>'; if (start > 2) html += '<span style="color:#94a3b8;padding:0 4px">…</span>'; }
+  for (var i = start; i <= end; i++) {
+    html += '<button onclick="goPage(' + i + ')" class="' + (i === currentPage ? 'active' : '') + '">' + i + '</button>';
+  }
+  if (end < totalPages) { if (end < totalPages - 1) html += '<span style="color:#94a3b8;padding:0 4px">…</span>'; html += '<button onclick="goPage(' + totalPages + ')">' + totalPages + '</button>'; }
+
+  html += '<button onclick="goPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>Next ›</button>';
+  html += '<span style="color:#94a3b8;font-size:13px;margin-left:12px">Page ' + currentPage + ' of ' + totalPages + '</span>';
+  pg.innerHTML = html;
+}
+
+function goPage(p) {
+  var totalPages = Math.ceil(filteredData.length / pageSize);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ── Filter ── */
 function applyFilters() {
   var val = document.getElementById('search').value.toLowerCase();
   filteredData = [];
@@ -156,7 +208,8 @@ function applyFilters() {
     filteredData.push(s);
   }
   if (sortKey) applySort(false);
-  else render(filteredData);
+  currentPage = 1;
+  render();
 }
 
 function filterGrade(g, btn) {
@@ -168,6 +221,7 @@ function filterGrade(g, btn) {
 
 document.getElementById('search').addEventListener('input', applyFilters);
 
+/* ── Sort ── */
 var lastTh = null;
 function sortBy(key, th) {
   if (sortKey === key) { sortDir *= -1; }
@@ -182,19 +236,18 @@ function applySort(doRender) {
   var k = sortKey, d = sortDir;
   filteredData.sort(function(a, b) {
     var av = a[k], bv = b[k];
-    if (k === 'Total') {
-      av = (a.Math || 0) + (a.Physics || 0) + (a.Chemistry || 0);
-      bv = (b.Math || 0) + (b.Physics || 0) + (b.Chemistry || 0);
-    }
+    if (k === 'Total') { av = (a.Math||0)+(a.Physics||0)+(a.Chemistry||0); bv = (b.Math||0)+(b.Physics||0)+(b.Chemistry||0); }
     if (typeof av === 'number') return (av - bv) * d;
     return String(av || '').localeCompare(String(bv || '')) * d;
   });
-  if (doRender) render(filteredData);
+  currentPage = 1;
+  if (doRender) render();
 }
 
+/* ── Modal ── */
 function openModal(idx) {
-  var s = filteredData[idx];
-  var g = (s.Grade || '').trim();
+  var s   = filteredData[idx];
+  var g   = (s.Grade || '').trim();
   var tot = (s.Math || 0) + (s.Physics || 0) + (s.Chemistry || 0);
   var name = s['Student_Names'] || '—';
   document.getElementById('mAvatar').innerText  = name.charAt(0).toUpperCase();
@@ -216,16 +269,14 @@ function closeModal(e) {
   if (e.target === document.getElementById('modalOverlay'))
     document.getElementById('modalOverlay').classList.remove('open');
 }
-
 function closeModalDirect() {
   document.getElementById('modalOverlay').classList.remove('open');
 }
-
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') document.getElementById('modalOverlay').classList.remove('open');
 });
 
-render(allData);
+render();
 </script>
 
 </body>
